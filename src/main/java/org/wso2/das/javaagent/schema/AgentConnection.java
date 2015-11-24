@@ -2,13 +2,12 @@ package org.wso2.das.javaagent.schema;
 
 import javax.xml.bind.annotation.XmlElement;
 
-/**
- * Created by udani on 10/23/15.
- */
 public class AgentConnection {
     private String streamName;
     private String tableName;
     private String streamVersion;
+    private String receiverURL;
+    private String authURL;
     private int thriftPort;
     private int binaryPort;
     private String username;
@@ -17,11 +16,14 @@ public class AgentConnection {
     private String servicePort;
 
     public AgentConnection() { }
-    public AgentConnection(String streamName, String tableName, String  streamVersion, int thriftPort, int binaryPort,
+    public AgentConnection(String streamName, String tableName, String  streamVersion,
+                           String receiverURL, String authURL,int thriftPort, int binaryPort,
                            String username, String password, String hostName, String servicePort) {
         this.streamName = streamName;
         this.tableName = tableName;
         this.streamVersion = streamVersion;
+        this.receiverURL = receiverURL;
+        this.authURL = authURL;
         this.thriftPort = thriftPort;
         this.binaryPort = binaryPort;
         this.username = username;
@@ -56,22 +58,41 @@ public class AgentConnection {
     public void setStreamVersion(String streamVersion) {
         this.streamVersion = streamVersion;
     }
-    @XmlElement(name = "thriftPort")
-    public int getThriftPort() {
-        return thriftPort;
+
+    @XmlElement(name = "receiverURL")
+    public String getReceiverURL() {
+        return receiverURL;
     }
 
-    public void setThriftPort(int thriftPort) {
-        this.thriftPort = thriftPort;
-    }
-    @XmlElement(name = "binaryPort")
-    public int getBinaryPort() {
-        return binaryPort;
+    public void setReceiverURL(String receiverURL) {
+        this.receiverURL = receiverURL;
     }
 
-    public void setBinaryPort(int binaryPort) {
-        this.binaryPort = binaryPort;
+    @XmlElement(name = "authURL")
+    public String getAuthURL() {
+        return authURL;
     }
+
+    public void setAuthURL(String authURL) {
+        this.authURL = authURL;
+    }
+
+//    @XmlElement(name = "thriftPort")
+//    public int getThriftPort() {
+//        return thriftPort;
+//    }
+//
+//    public void setThriftPort(int thriftPort) {
+//        this.thriftPort = thriftPort;
+//    }
+//    @XmlElement(name = "binaryPort")
+//    public int getBinaryPort() {
+//        return binaryPort;
+//    }
+//
+//    public void setBinaryPort(int binaryPort) {
+//        this.binaryPort = binaryPort;
+//    }
 
     @XmlElement(name = "username")
     public String getUsername() {
