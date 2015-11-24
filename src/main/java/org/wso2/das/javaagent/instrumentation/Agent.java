@@ -50,6 +50,7 @@ public class Agent {
                         AgentPublisher.getClassMap().put(instrumentationClass.getClassName(),
                                 Agent.fillMethodList(newClass, instrumentationClass, scenario.getScenarioName()));
                     }
+                    AgentPublisher.initializeArbitraryFieldList(instrumentationClass);
                 }
             }
 
@@ -61,7 +62,7 @@ public class Agent {
     }
 
     /**
-     * For a given arraylist mapped to a specific className in classMap, create new objects
+     * For a given arraylist which is mapped to a specific className in classMap, create new objects
      * using instrumentation method details and scenario names and fill the list.
      * @param classData List of type Instrumentation Class data. It can be new list or halfway filled list
      * @param instrumentationClass InstrumentationClass object for currently processing className

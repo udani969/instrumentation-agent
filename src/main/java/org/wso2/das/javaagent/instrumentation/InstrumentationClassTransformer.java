@@ -16,8 +16,26 @@ import java.util.Map;
 
 public class InstrumentationClassTransformer implements ClassFileTransformer {
 //    final static Logger logger = Logger.getLogger(InstrumentationClassTransformer.class);
-//    public static List<SchemaClass> transformMe = new ArrayList<SchemaClass>();
 
+    /**
+     * Create a copy of currently processing class. Since javassist instrument methods with body,
+     * for each Class iterate through all the methods defined to find respective methods.
+     * Instrument method body by injecting required code and return
+     * the class file of the modified class.
+     *
+     * @param loader the defining loader of the class to be transformed, may be null if the
+     *               bootstrap loader
+     * @param className the name of the class in the internal form of fully qualified class
+     *            and interface names as defined in The Java Virtual Machine Specification
+     * @param classBeingRedefined if this is triggered by a redefine or retransform,
+     *            the class being redefined or retransformed;
+     *            if this is a class load, null
+     * @param protectionDomain the protection domain of the class being defined or redefined
+     * @param classfileBuffer the input byte buffer in class file format
+     * @return a well-formed class file buffer (the result of the transform),
+     * or null if no transform is performed
+     * @throws IllegalClassFormatException
+     */
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
                             ProtectionDomain protectionDomain, byte[] classfileBuffer)
             throws IllegalClassFormatException {
@@ -55,7 +73,6 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
 
     }
 
-
     public void instrumentMethod(String payloadData, InstrumentationMethod instrumentationMethod,
                                  CtMethod method) throws NotFoundException, CannotCompileException {
         createInsertBefore(payloadData, method, instrumentationMethod.getinsertBefore());
@@ -67,12 +84,6 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
                 Map<String,String> parameterMap = new HashMap<String,String>();
                 if(!parameterNames.isEmpty()){
                     for(ParameterName parameterName : parameterNames){
-                        /*
-                         * When setting setting the schema of the table we have to add a '_'
-                         * before each table name. But when publishing data in map, use key name
-                         * given in configuration file without '_'
-                         */
-                        AgentPublisher.setArbitraryFields("_" + parameterName.getKey());
                         parameterMap.put(parameterName.getKey(), parameterName.getParameterValue());
                     }
                     createInsertAt(payloadData, method, insertAt.getLineNo(), parameterMap);
@@ -96,7 +107,7 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
 
         atBuilder.append("org.wso2.das.javaagent.instrumentation.AgentPublisher.publishEvents(" +
                 "System.currentTimeMillis(),\"" + payloadData + ":line "+lineNo+": \",insertAtMap" + lineNo + ");");
-//        System.out.println(atBuilder.toString());
+
         method.insertAt(lineNo, atBuilder.toString());
     }
 
@@ -111,7 +122,6 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
 
         beforeBuilder.append("org.wso2.das.javaagent.instrumentation.AgentPublisher.publishEvents(" +
                 "System.currentTimeMillis(),\"" + payloadData + ":start: \");");
-//        System.out.println(beforeBuilder.toString());
         method.insertBefore(beforeBuilder.toString());
     }
 
@@ -124,7 +134,6 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
         afterBuilder.append("org.wso2.das.javaagent.instrumentation.AgentPublisher.publishEvents(" +
                 "System.currentTimeMillis(),\"" + payloadData + ":end:\"+" +
                 "String.valueOf(System.nanoTime()-startTime));");
-//        System.out.println(afterBuilder.toString());
         method.insertAfter(afterBuilder.toString());
     }
 

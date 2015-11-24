@@ -13,7 +13,8 @@ import org.wso2.carbon.databridge.agent.exception.DataEndpointException;
 import org.wso2.carbon.databridge.commons.exception.AuthenticationException;
 import org.wso2.carbon.databridge.commons.exception.TransportException;
 import org.wso2.carbon.databridge.commons.utils.DataBridgeCommonsUtils;
-import org.wso2.das.javaagent.schema.AgentConnection;
+import org.wso2.das.javaagent.schema.*;
+import org.wso2.das.javaagent.worker.AgentConnectionWorker;
 
 import java.io.*;
 import java.net.*;
@@ -30,63 +31,33 @@ public class AgentPublisher {
     private static List<String> arbitraryFields = new ArrayList<String>();
     private static AgentConnection agentConnection;
     private static Map<String,List<InstrumentationClassData>> classMap = new HashMap<String, List<InstrumentationClassData>>();
-    private static boolean connectionCheck;
-    private static boolean schemaModified;
     protected static final String CARBON_HOME = org.wso2.carbon.utils.CarbonUtils.getCarbonHome();
-
-//    final static Logger logger = Logger.getLogger(AgentPublisher.class);
+    protected static final String THRIFT_AGENT_TYPE = "Thrift";
 
     public AgentPublisher(AgentConnection agentConnection)
             throws DataEndpointConfigurationException, DataEndpointException,
             DataEndpointAgentConfigurationException, AuthenticationException,
             SocketException, UnknownHostException, TransportException, MalformedURLException,
             DataEndpointAuthenticationException {
-//
+
         AgentPublisher.agentStream = agentConnection.getStreamName();
         AgentPublisher.version = agentConnection.getStreamVersion();
-        AgentPublisher.thriftPort = agentConnection.getThriftPort();
-        AgentPublisher.binaryPort = agentConnection.getBinaryPort();
-
-        waitForConnection(agentConnection.getHostName(), 7711);
-        connectToServer(agentConnection);
-
         AgentPublisher.agentConnection = agentConnection;
-        AgentPublisher.connectionCheck = false;
-        AgentPublisher.schemaModified = false;
+
+        setProperties();
+
+        AgentPublisher.dataPublisher = new DataPublisher(THRIFT_AGENT_TYPE, agentConnection.getReceiverURL(),
+                agentConnection.getAuthURL(), agentConnection.getUsername(), agentConnection.getPassword());
+        AgentPublisher.streamId = DataBridgeCommonsUtils.generateStreamId(agentStream, version);
+
+        Thread connectionWorker = new Thread(new AgentConnectionWorker());
+        connectionWorker.start();
+
     }
 
-    public static String getAgentStream() {
-        return agentStream;
-    }
-
-    public static void setAgentStream(String agentStream) {
-        AgentPublisher.agentStream = agentStream;
-    }
-
-    public static String getVersion() {
-        return version;
-    }
-
-    public static void setVersion(String version) {
-        AgentPublisher.version = version;
-    }
-
-    public static int getThriftPort() {
-        return thriftPort;
-    }
-
-    public static void setThriftPort(int thriftPort) {
-        AgentPublisher.thriftPort = thriftPort;
-    }
-
-    public static int getBinaryPort() {
-        return binaryPort;
-    }
-
-    public static void setBinaryPort(int binaryPort) {
-        AgentPublisher.binaryPort = binaryPort;
-    }
-
+    /**
+     * @return Fields of current schema as a set
+     */
     public static Set<String> getCurrentSchemaFieldsSet() {
         return currentSchemaFieldsSet;
     }
@@ -95,6 +66,9 @@ public class AgentPublisher {
         AgentPublisher.currentSchemaFieldsSet.add(field);
     }
 
+    /**
+     * @return Arbitrary fields read from the configuration file as a list
+     */
     public static List<String> getArbitraryFields() {
         return arbitraryFields;
     }
@@ -103,6 +77,9 @@ public class AgentPublisher {
         AgentPublisher.arbitraryFields.add(arbitraryField);
     }
 
+    /**
+     * @return Map containing <className, instrumentation details list>
+     */
     public static Map<String, List<InstrumentationClassData>> getClassMap() {
         return classMap;
     }
@@ -111,77 +88,28 @@ public class AgentPublisher {
         AgentPublisher.classMap = classMap;
     }
 
-    public static void connectToServer(AgentConnection agentConnection) throws SocketException, UnknownHostException,
-            DataEndpointAuthenticationException, DataEndpointAgentConfigurationException,
-            TransportException, DataEndpointException, DataEndpointConfigurationException,
-            AuthenticationException, MalformedURLException {
+    public static AgentConnection getAgentConnection() {
+        return agentConnection;
+    }
 
-//        String log4jConfPath = "./src/main/resources/log4j.properties";
-//        PropertyConfigurator.configure(log4jConfPath);
-//        String log4jConfPath = CARBON_HOME + "/repository/conf/javaagent/log4j.properties";
-//        PropertyConfigurator.configure(log4jConfPath);
-//        String currentDir = System.getProperty("user.dir");
-//        System.setProperty("javax.net.ssl.trustStore",
-//                currentDir + "/src/main/resources/client-truststore.jks");
+    public static void setProperties(){
         System.setProperty("javax.net.ssl.trustStore",
                 CARBON_HOME + "/repository/conf/client-truststore.jks");
         System.setProperty("javax.net.ssl.trustStorePassword", "wso2carbon");
 
         AgentHolder.setConfigPath(getDataAgentConfigPath());
-        String host = getLocalAddress().getHostAddress();
-
-        String type = getProperty("type", "Thrift");
-        int receiverPort = thriftPort;
-        if (type.equals("Binary")) {
-            receiverPort = binaryPort;
-        }
-        int securePort = receiverPort + 100;
-
-        String url = getProperty("url", "tcp://" + host + ":" + receiverPort);
-        String authURL = getProperty("authURL", "ssl://" + host + ":" + securePort);
-        String username = getProperty("username", agentConnection.getUsername());
-        String password = getProperty("password", agentConnection.getPassword());
-//        logger.info(type+":"+url+":"+authURL);
-        dataPublisher = new DataPublisher(type, url, authURL, username, password);
-
-        streamId = DataBridgeCommonsUtils.generateStreamId(agentStream, version);
-    }
-
-    private static String getProperty(String name, String def) {
-        String result = System.getProperty(name);
-        if (result == null || result.length() == 0 || result.equals("")) {
-            result = def;
-        }
-        return result;
-    }
-
-    public static InetAddress getLocalAddress() throws SocketException, UnknownHostException {
-        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-        while (interfaces.hasMoreElements()) {
-            NetworkInterface iface = interfaces.nextElement();
-            Enumeration<InetAddress> addresses = iface.getInetAddresses();
-
-            while (addresses.hasMoreElements()) {
-                InetAddress addr = addresses.nextElement();
-                if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                    return addr;
-                }
-            }
-        }
-        return InetAddress.getLocalHost();
     }
 
     public static String getDataAgentConfigPath() {
-//        File filePath = new File("src" + File.separator + "main" + File.separator + "resources");
-//        return filePath.getAbsolutePath() + File.separator + "data-agent-conf.xml";
         File filePath = new File("repository" + File.separator + "conf" + File.separator + "data-bridge");
         return filePath.getAbsolutePath() + File.separator + "data-agent-config.xml";
     }
+
     /**
      * Publish the obtained queries to DAS using normal publish method which passes
-     * only metadata, correlation data and payload data. Three parameters concatenated in
-     * payload data (scenario name, class name, method name, duration) would be separated into
-     * a object array.
+     * only metadata, correlation data and payload data. Five parameters concatenated in
+     * payload data (scenario name, class name, method name, instrumentation location, duration)
+     * would be separated into an object array.
      * @param timeStamp current timestamp
      * @param payloadData string containing payload data values
      * @throws FileNotFoundException
@@ -189,24 +117,16 @@ public class AgentPublisher {
      * @throws UnknownHostException
      */
     public static void publishEvents(long timeStamp, String payloadData)
-            throws IOException, ParseException, AuthenticationException, DataEndpointException, DataEndpointConfigurationException, DataEndpointAuthenticationException, DataEndpointAgentConfigurationException, TransportException {
+            throws IOException, ParseException, AuthenticationException, DataEndpointException,
+            DataEndpointConfigurationException, DataEndpointAuthenticationException,
+            DataEndpointAgentConfigurationException, TransportException {
         Object[] payload;
-        waitForConnection(agentConnection.getHostName(), thriftPort + 100);
-//        if(connectionCheck && dataPublisher==null){
-//            connectToServer(agentConnection);
-//        }
-            if(!AgentPublisher.getArbitraryFields().isEmpty()){
-                AgentPublisher.updateCurrentSchema(
-                        AgentPublisher.generateConnectionURL(agentConnection),
-                        agentConnection.getUsername(),agentConnection.getPassword(),
-                        AgentPublisher.getArbitraryFields());
-            }
         payload = payloadData.split(":");
         dataPublisher.publish(streamId, timeStamp, null, null, payload, null);
     }
 
     /**
-     * Overloaded method of the above publishEvents method, with extra parameter to pass
+     * Overloaded the above publishEvents method, with extra parameter to pass
      * key,value pairs obtained in situations with extra attributes.
      * @param timeStamp current time in milli seconds
      * @param payloadData string containing payload data values
@@ -217,27 +137,19 @@ public class AgentPublisher {
      */
     public static void publishEvents(long timeStamp, String payloadData,
                                      Map<String,String> arbitraryMap)
-            throws IOException, ParseException, AuthenticationException, DataEndpointException, DataEndpointConfigurationException, DataEndpointAuthenticationException, DataEndpointAgentConfigurationException, TransportException {
+            throws IOException, ParseException, AuthenticationException, DataEndpointException,
+            DataEndpointConfigurationException, DataEndpointAuthenticationException,
+            DataEndpointAgentConfigurationException, TransportException {
         Object[] payload;
-        waitForConnection(agentConnection.getHostName(),thriftPort+100);
-//        if(connectionCheck && dataPublisher==null){
-//            connectToServer(agentConnection);
-//        }
-        if(!AgentPublisher.getArbitraryFields().isEmpty()){
-            AgentPublisher.updateCurrentSchema(
-                    AgentPublisher.generateConnectionURL(agentConnection),
-                    agentConnection.getUsername(),agentConnection.getPassword(),
-                    AgentPublisher.getArbitraryFields());
-            }
         payload = payloadData.split(":");
         dataPublisher.publish(streamId, timeStamp, null, null, payload, arbitraryMap);
     }
 
     /**
-     * Obtain the current schema of the given table and filter the column names of currently
+     * Obtain the current schema of the given table. Filter the column names of currently
      * available fields. For each field read from the configuration file, check against the
-     * current filtered fields set, and add only the new fields to the schema. Finally return the
-     * modified schema using POST method of REST API
+     * current filtered fields set. Add only the new fields to the schema. Finally return the
+     * modified schema using REST API
      * @param connectionUrl url to connect to server
      * @param username username of the server
      * @param password password of the server
@@ -249,11 +161,42 @@ public class AgentPublisher {
     public static void updateCurrentSchema(String connectionUrl, String username,
                                            String password, List<String> arbitraryFields)
             throws IOException, ParseException {
+//        System.out.println("Visit update schema");
         String currentSchema = AgentPublisher.getCurrentSchema(connectionUrl, username, password);
+//        System.out.println(currentSchema);
         AgentPublisher.filterCurrentSchemaFields(currentSchema);
         String modifiedSchema = AgentPublisher.addArbitraryFieldsToSchema(currentSchema, arbitraryFields);
         if(!modifiedSchema.equals(currentSchema)){
+//            System.out.println(modifiedSchema);
             AgentPublisher.setModifiedSchema(connectionUrl, username, password, modifiedSchema);
+        }
+    }
+
+    /**
+     * Fill the arbitraryFields list using parameters read from the configuration file
+     * @param instrumentationClass instrumentationClass object generated from unmarshalling
+     */
+    public static void initializeArbitraryFieldList(InstrumentationClass instrumentationClass){
+        List<InstrumentationMethod> instrumentationMethods = instrumentationClass.getinstrumentationMethods();
+        for(InstrumentationMethod instrumentationMethod : instrumentationMethods){
+            List<InsertAt> insertAts = instrumentationMethod.getInsertAts();
+            if(insertAts!=null && !insertAts.isEmpty()){
+                for(InsertAt insertAt : insertAts){
+                    List<ParameterName> parameterNames = insertAt.getParameterNames();
+                    if(!parameterNames.isEmpty()){
+                        for(ParameterName parameterName : parameterNames){
+                        /*
+                         * When setting setting the schema of the table we have to add a '_'
+                         * before each table name. But when publishing data in map, use key name
+                         * given in configuration file without '_'
+                         */
+                            if(!AgentPublisher.getArbitraryFields().contains("_" + parameterName.getKey())){
+                                AgentPublisher.setArbitraryFields("_" + parameterName.getKey());
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -287,7 +230,7 @@ public class AgentPublisher {
             BufferedReader br = new BufferedReader(new InputStreamReader(
                     (conn.getInputStream())));
             currentSchema = br.readLine();
-
+//            System.out.println(currentSchema);
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -339,7 +282,7 @@ public class AgentPublisher {
             String authString = username + ":" + password;
             String authStringEnc = new String(Base64.encodeBase64(authString.getBytes()));
             conn.setRequestProperty("Authorization", "Basic " + authStringEnc);
-
+//            System.out.println(newSchema);
             OutputStream os = conn.getOutputStream();
             os.write(newSchema.getBytes());
             os.flush();
@@ -347,6 +290,7 @@ public class AgentPublisher {
                 throw new RuntimeException("Failed : HTTP error code : "
                         + conn.getResponseCode());
             }
+//            System.out.println(conn.getResponseCode());
             conn.disconnect();
 
         } catch (Exception e) {
@@ -362,7 +306,6 @@ public class AgentPublisher {
     @SuppressWarnings("unchecked")
     public static void filterCurrentSchemaFields(String currentSchema) throws ParseException {
         JSONParser parser = new JSONParser();
-//        System.out.println(currentSchema);
         JSONObject json = (JSONObject)parser.parse(currentSchema);
         JSONObject keys = (JSONObject)json.get("columns");
         Set keySet = keys.keySet();
@@ -370,6 +313,7 @@ public class AgentPublisher {
         while(i.hasNext()) {
             AgentPublisher.setCurrentSchemaFieldsSet(String.valueOf(i.next()));
         }
+//        System.out.println(AgentPublisher.getCurrentSchemaFieldsSet());
     }
 
     public static String generateConnectionURL(AgentConnection agentConnection){
@@ -378,32 +322,30 @@ public class AgentPublisher {
                 + agentConnection.getTableName() + "/schema";
     }
 
-    public static void waitForConnection(String host, int port) {
-//        boolean connectionCheck = false;
-
-        while(!connectionCheck) {
-            Socket s = null;
-            try {
-                s = new Socket(host, port);
-                connectionCheck = true;
-            } catch (Exception e) {
-                try
-                {
-                    System.out.println("Failed");
-                    connectionCheck = false;
-                    Thread.sleep(2000);
-                }
-                catch(InterruptedException ignored){
-                }
-            } finally {
-                if(s != null) {
-                    try {
-                        s.close();
-                    }
-                    catch(Exception ignored) {
-                    }
-                }
-            }
-        }
-    }
+//    public static void setupAgentDisruptor(){
+//        // Executor that will be used to construct new threads for consumers
+//        //these threads wil be reused
+//        executor = Executors.newCachedThreadPool();
+//
+//        // The factory for the event
+//        factory = new PublishEventFactory();
+//
+//        // Specify the size of the ring buffer, must be power of 2.
+//        int bufferSize = BUFFER_SIZE;
+//
+//        // Construct the Disruptor
+//        disruptor = new Disruptor<PublishEvent>(factory, bufferSize, executor);
+//
+//        // Connect the handler, the consumer
+//        disruptor.handleEventsWith(new PublishEventHandler(dataPublisher));
+//
+//        // Start the Disruptor, starts all threads running
+//        disruptor.start();
+//
+//        // Get the ring buffer from the Disruptor to be used for publishing.
+//        ringBuffer = disruptor.getRingBuffer();
+//
+//        producer = new PublishEventProducer(ringBuffer);
+//
+//    }
 }
