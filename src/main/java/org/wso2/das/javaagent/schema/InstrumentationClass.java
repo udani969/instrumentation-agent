@@ -1,9 +1,8 @@
 package org.wso2.das.javaagent.schema;
 
-import java.util.List;
-
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
+import java.util.List;
 
 public class InstrumentationClass {
     private String className;
@@ -25,12 +24,8 @@ public class InstrumentationClass {
         this.className = className;
     }
 
-    public List<InstrumentationMethod> getinstrumentationMethods() {
-        return instrumentationMethods;
-    }
-
     @XmlElement(name = "instrumentingMethod")
-    public void setinstrumentationMethods(List<InstrumentationMethod> instrumentationMethods) {
+    public void setInstrumentationMethods(List<InstrumentationMethod> instrumentationMethods) {
         this.instrumentationMethods = instrumentationMethods;
     }
 

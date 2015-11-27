@@ -1,3 +1,21 @@
+/*
+ *
+ *  Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ */
+
 package org.wso2.das.javaagent.instrumentation;
 
 import org.json.simple.parser.ParseException;
@@ -19,15 +37,16 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Agent {
 
+
+public class Agent {
+//    private static final Log log = LogFactory.getLog(InstrumentationClassTransformer.class);
     public static void premain(String agentArgs, Instrumentation instrumentation) throws JAXBException,
             ClassNotFoundException, UnmodifiableClassException, DataEndpointException,
             IOException, DataEndpointConfigurationException,
             DataEndpointAuthenticationException, DataEndpointAgentConfigurationException,
             TransportException, AuthenticationException, ParseException {
 
-        System.out.println("Agent Premain Start");
         File file = new File(AgentPublisher.CARBON_HOME + "/repository/conf/javaagent/inst-agent-config.xml");
         JAXBContext jaxbContext = JAXBContext.newInstance(InstrumentationAgent.class);
 
@@ -71,7 +90,7 @@ public class Agent {
      */
     private static List<InstrumentationClassData> fillMethodList(List<InstrumentationClassData> classData,
                                   InstrumentationClass instrumentationClass, String scenarioName){
-        List<InstrumentationMethod> instrumentationMethods = instrumentationClass.getinstrumentationMethods();
+        List<InstrumentationMethod> instrumentationMethods = instrumentationClass.getInstrumentationMethods();
         for(InstrumentationMethod instrumentationMethod : instrumentationMethods){
             classData.add(new InstrumentationClassData(scenarioName, instrumentationMethod));
         }

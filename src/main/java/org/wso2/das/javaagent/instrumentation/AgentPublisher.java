@@ -1,3 +1,21 @@
+/*
+ *
+ *  Copyright (c) 2014, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ */
+
 package org.wso2.das.javaagent.instrumentation;
 
 import org.apache.commons.codec.binary.Base64;
@@ -23,8 +41,6 @@ import java.util.*;
 public class AgentPublisher {
     private static String agentStream;
     private static String version;
-    private static int thriftPort;
-    private static int binaryPort;
     private static String streamId;
     private static DataPublisher dataPublisher;
     private static Set<String> currentSchemaFieldsSet = new HashSet<String>();
@@ -161,13 +177,10 @@ public class AgentPublisher {
     public static void updateCurrentSchema(String connectionUrl, String username,
                                            String password, List<String> arbitraryFields)
             throws IOException, ParseException {
-//        System.out.println("Visit update schema");
         String currentSchema = AgentPublisher.getCurrentSchema(connectionUrl, username, password);
-//        System.out.println(currentSchema);
         AgentPublisher.filterCurrentSchemaFields(currentSchema);
         String modifiedSchema = AgentPublisher.addArbitraryFieldsToSchema(currentSchema, arbitraryFields);
         if(!modifiedSchema.equals(currentSchema)){
-//            System.out.println(modifiedSchema);
             AgentPublisher.setModifiedSchema(connectionUrl, username, password, modifiedSchema);
         }
     }
@@ -177,7 +190,7 @@ public class AgentPublisher {
      * @param instrumentationClass instrumentationClass object generated from unmarshalling
      */
     public static void initializeArbitraryFieldList(InstrumentationClass instrumentationClass){
-        List<InstrumentationMethod> instrumentationMethods = instrumentationClass.getinstrumentationMethods();
+        List<InstrumentationMethod> instrumentationMethods = instrumentationClass.getInstrumentationMethods();
         for(InstrumentationMethod instrumentationMethod : instrumentationMethods){
             List<InsertAt> insertAts = instrumentationMethod.getInsertAts();
             if(insertAts!=null && !insertAts.isEmpty()){
@@ -230,7 +243,6 @@ public class AgentPublisher {
             BufferedReader br = new BufferedReader(new InputStreamReader(
                     (conn.getInputStream())));
             currentSchema = br.readLine();
-//            System.out.println(currentSchema);
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -282,7 +294,6 @@ public class AgentPublisher {
             String authString = username + ":" + password;
             String authStringEnc = new String(Base64.encodeBase64(authString.getBytes()));
             conn.setRequestProperty("Authorization", "Basic " + authStringEnc);
-//            System.out.println(newSchema);
             OutputStream os = conn.getOutputStream();
             os.write(newSchema.getBytes());
             os.flush();
@@ -290,7 +301,6 @@ public class AgentPublisher {
                 throw new RuntimeException("Failed : HTTP error code : "
                         + conn.getResponseCode());
             }
-//            System.out.println(conn.getResponseCode());
             conn.disconnect();
 
         } catch (Exception e) {
@@ -313,7 +323,6 @@ public class AgentPublisher {
         while(i.hasNext()) {
             AgentPublisher.setCurrentSchemaFieldsSet(String.valueOf(i.next()));
         }
-//        System.out.println(AgentPublisher.getCurrentSchemaFieldsSet());
     }
 
     public static String generateConnectionURL(AgentConnection agentConnection){
@@ -321,31 +330,4 @@ public class AgentPublisher {
                 + agentConnection.getServicePort() + "/analytics/tables/"
                 + agentConnection.getTableName() + "/schema";
     }
-
-//    public static void setupAgentDisruptor(){
-//        // Executor that will be used to construct new threads for consumers
-//        //these threads wil be reused
-//        executor = Executors.newCachedThreadPool();
-//
-//        // The factory for the event
-//        factory = new PublishEventFactory();
-//
-//        // Specify the size of the ring buffer, must be power of 2.
-//        int bufferSize = BUFFER_SIZE;
-//
-//        // Construct the Disruptor
-//        disruptor = new Disruptor<PublishEvent>(factory, bufferSize, executor);
-//
-//        // Connect the handler, the consumer
-//        disruptor.handleEventsWith(new PublishEventHandler(dataPublisher));
-//
-//        // Start the Disruptor, starts all threads running
-//        disruptor.start();
-//
-//        // Get the ring buffer from the Disruptor to be used for publishing.
-//        ringBuffer = disruptor.getRingBuffer();
-//
-//        producer = new PublishEventProducer(ringBuffer);
-//
-//    }
 }

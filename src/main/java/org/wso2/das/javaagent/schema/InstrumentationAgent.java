@@ -1,14 +1,9 @@
 package org.wso2.das.javaagent.schema;
 
-import java.util.List;
-
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
-
-/**
- * Created by udani on 10/16/15.
- */
+import java.util.List;
 
 @XmlRootElement(name = "instrumentationAgent")
 public class InstrumentationAgent {
