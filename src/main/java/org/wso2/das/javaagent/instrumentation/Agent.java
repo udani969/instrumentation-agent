@@ -55,7 +55,6 @@ public class Agent {
 
         AgentConnection agentConnection = agent.getAgentConnection();
         if(agentConnection!=null) {
-            AgentPublisher publisherObj = new AgentPublisher(agentConnection);
             List<Scenario> scenarios = agent.getScenarios();
 
             for (Scenario scenario : scenarios) {
@@ -69,10 +68,10 @@ public class Agent {
                         AgentPublisher.getClassMap().put(instrumentationClass.getClassName(),
                                 Agent.fillMethodList(newClass, instrumentationClass, scenario.getScenarioName()));
                     }
-                    AgentPublisher.initializeArbitraryFieldList(instrumentationClass);
+                    Agent.initializeArbitraryFieldList(instrumentationClass);
                 }
             }
-
+            AgentPublisher publisherObj = new AgentPublisher(agentConnection);
             instrumentation.addTransformer(new InstrumentationClassTransformer());
         }
 
@@ -95,5 +94,33 @@ public class Agent {
             classData.add(new InstrumentationClassData(scenarioName, instrumentationMethod));
         }
         return classData;
+    }
+
+    /**
+     * Fill the arbitraryFields list using parameters read from the configuration file
+     * @param instrumentationClass instrumentationClass object generated from unmarshalling
+     */
+    public static void initializeArbitraryFieldList(InstrumentationClass instrumentationClass){
+        List<InstrumentationMethod> instrumentationMethods = instrumentationClass.getInstrumentationMethods();
+        for(InstrumentationMethod instrumentationMethod : instrumentationMethods){
+            List<InsertAt> insertAts = instrumentationMethod.getInsertAts();
+            if(insertAts!=null && !insertAts.isEmpty()){
+                for(InsertAt insertAt : insertAts){
+                    List<ParameterName> parameterNames = insertAt.getParameterNames();
+                    if(!parameterNames.isEmpty()){
+                        for(ParameterName parameterName : parameterNames){
+                        /*
+                         * When setting setting the schema of the table we have to add a '_'
+                         * before each table name. But when publishing data in map, use key name
+                         * given in configuration file without '_'
+                         */
+                            if(!AgentPublisher.getArbitraryFields().contains("_" + parameterName.getKey())){
+                                AgentPublisher.setArbitraryFields("_" + parameterName.getKey());
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

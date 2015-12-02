@@ -62,7 +62,6 @@ public class AgentConnectionWorker implements Runnable{
             } catch (Exception e) {
                 try
                 {
-                    System.out.println("Failed");
                     connectionCheck = false;
                     Thread.sleep(2000);
                 }
@@ -71,7 +70,6 @@ public class AgentConnectionWorker implements Runnable{
             } finally {
                 if(s != null) {
                     try {
-                        System.out.println("connection closed");
                         s.close();
                     }
                     catch(Exception ignored) {

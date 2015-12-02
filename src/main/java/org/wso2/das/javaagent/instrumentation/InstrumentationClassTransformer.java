@@ -152,6 +152,7 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
         afterBuilder.append("org.wso2.das.javaagent.instrumentation.AgentPublisher.publishEvents(" +
                 "System.currentTimeMillis(),\"" + payloadData + ":end:\"+" +
                 "String.valueOf(System.nanoTime()-startTime));");
+
         method.insertAfter(afterBuilder.toString());
     }
 

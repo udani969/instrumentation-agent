@@ -186,34 +186,6 @@ public class AgentPublisher {
     }
 
     /**
-     * Fill the arbitraryFields list using parameters read from the configuration file
-     * @param instrumentationClass instrumentationClass object generated from unmarshalling
-     */
-    public static void initializeArbitraryFieldList(InstrumentationClass instrumentationClass){
-        List<InstrumentationMethod> instrumentationMethods = instrumentationClass.getInstrumentationMethods();
-        for(InstrumentationMethod instrumentationMethod : instrumentationMethods){
-            List<InsertAt> insertAts = instrumentationMethod.getInsertAts();
-            if(insertAts!=null && !insertAts.isEmpty()){
-                for(InsertAt insertAt : insertAts){
-                    List<ParameterName> parameterNames = insertAt.getParameterNames();
-                    if(!parameterNames.isEmpty()){
-                        for(ParameterName parameterName : parameterNames){
-                        /*
-                         * When setting setting the schema of the table we have to add a '_'
-                         * before each table name. But when publishing data in map, use key name
-                         * given in configuration file without '_'
-                         */
-                            if(!AgentPublisher.getArbitraryFields().contains("_" + parameterName.getKey())){
-                                AgentPublisher.setArbitraryFields("_" + parameterName.getKey());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Method to retrieve the current schema of the given table
      * @param connectionUrl https request to sent to the REST API
      * @param username Username of the server
