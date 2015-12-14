@@ -1,22 +1,20 @@
 package org.wso2.das.javaagent.schema;
 
-import java.util.List;
-
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
+import java.util.List;
 
 public class InstrumentationMethod {
     private String methodName;
     private String methodSignature;
-    private String insertBefore;
+    private InsertBefore insertBefore;
     private List<InsertAt> insertAts;
-    private String insertAfter;
+    private InsertAfter insertAfter;
 
     public InstrumentationMethod() { }
-
     public InstrumentationMethod(String methodName, String methodSignature,
-                                 String insertBefore, List<InsertAt> insertAts, String insertAfter) {
+                                 InsertBefore insertBefore, List<InsertAt> insertAts, InsertAfter insertAfter) {
         this.methodName = methodName;
         this.methodSignature = methodSignature;
         this.insertBefore = insertBefore;
@@ -42,12 +40,12 @@ public class InstrumentationMethod {
         this.methodSignature = methodSignature;
     }
 
-    @XmlElement(name = "insertBeforeContent")
-    public String getinsertBefore() {
+    @XmlElement(name = "insertBefore")
+    public InsertBefore getInsertBefore() {
         return insertBefore;
     }
 
-    public void setinsertBefore(String insertBefore) {
+    public void setInsertBefore(InsertBefore insertBefore) {
         this.insertBefore = insertBefore;
     }
 
@@ -61,12 +59,12 @@ public class InstrumentationMethod {
         this.insertAts = insertAts;
     }
 
-    @XmlElement(name = "insertAfterContent")
-    public String getInsertAfter() {
+    @XmlElement(name = "insertAfter")
+    public InsertAfter getInsertAfter() {
         return insertAfter;
     }
 
-    public void setInsertAfter(String insertAfter) {
+    public void setInsertAfter(InsertAfter insertAfter) {
         this.insertAfter = insertAfter;
     }
 }

@@ -1,8 +1,10 @@
 package org.wso2.das.javaagent.schema;
 
 import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
+@XmlRootElement(name = "parameterName")
 public class ParameterName {
     private String key;
     private String parameterValue;

@@ -13,27 +13,28 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
+ * /
  */
 
-package org.wso2.das.javaagent.instrumentation;
+package org.wso2.das.javaagent.schema;
 
-import org.wso2.das.javaagent.schema.InstrumentationMethod;
+import javax.xml.bind.annotation.XmlElement;
+import java.util.List;
 
-public class InstrumentationClassData {
-    private String scenarioName;
-    private InstrumentationMethod instrumentationMethod;
+public class InsertAfter {
+    private List<ParameterName> parameterNames;
 
-    public InstrumentationClassData(String scenarioName, InstrumentationMethod instrumentationMethod) {
-        this.scenarioName = scenarioName;
-        this.instrumentationMethod = instrumentationMethod;
+    public InsertAfter(){}
+    public InsertAfter(List<ParameterName> parameterNames) {
+        this.parameterNames = parameterNames;
     }
 
-    public String getScenarioName() {
-        return scenarioName;
+    @XmlElement(name = "parameterName")
+    public List<ParameterName> getParameterNames() {
+        return parameterNames;
     }
 
-    public InstrumentationMethod getInstrumentationMethod() {
-        return instrumentationMethod;
+    public void setParameterNames(List<ParameterName> parameterNames) {
+        this.parameterNames = parameterNames;
     }
 }
