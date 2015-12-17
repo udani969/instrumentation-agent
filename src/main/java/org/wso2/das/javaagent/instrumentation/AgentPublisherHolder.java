@@ -34,7 +34,11 @@ import org.wso2.das.javaagent.schema.AgentConnection;
 import java.io.File;
 import java.util.Map;
 
+/**
+ * AgentPublisherHolder handles the publishing of events to DAS server.
+ */
 public class AgentPublisherHolder {
+
     private static final Log log = LogFactory.getLog(AgentPublisherHolder.class);
     private static AgentPublisherHolder instance = null;
     private String streamId;
@@ -54,7 +58,9 @@ public class AgentPublisherHolder {
     public void addAgentConfiguration(AgentConnection agentConnection) throws InstrumentationAgentException {
         locateConfigurationFiles();
         setupAgentPublisher(agentConnection, agentConnection.getStreamName(), agentConnection.getStreamVersion());
-        log.debug("Publisher created successfully");
+        if(log.isDebugEnabled()){
+            log.debug("Publisher created successfully");
+        }
     }
 
     private void setupAgentPublisher(AgentConnection agentConnection, String agentStream, String version)
@@ -80,16 +86,10 @@ public class AgentPublisherHolder {
         trustStorePath += "client-truststore.jks";
         System.setProperty("javax.net.ssl.trustStore", trustStorePath);
         System.setProperty("javax.net.ssl.trustStorePassword", "wso2carbon");
-
         if (!dataHolder.isCarbonProduct()) {
             AgentHolder.setConfigPath(dataHolder.getConfigFilePathHolder() + "data-agent-config.xml");
         }
     }
-
-    // public String getDataAgentConfigPath() {
-    // File filePath = new File("repository" + File.separator + "conf" + File.separator + "data-bridge");
-    // return filePath.getAbsolutePath() + File.separator + "";
-    // }
 
     /**
      * Publish the obtained queries to DAS using normal publish method which passes

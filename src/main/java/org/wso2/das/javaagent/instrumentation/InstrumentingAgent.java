@@ -20,6 +20,7 @@ package org.wso2.das.javaagent.instrumentation;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.PropertyConfigurator;
 import org.wso2.das.javaagent.exception.InstrumentationAgentException;
 import org.wso2.das.javaagent.schema.*;
 import org.wso2.das.javaagent.worker.AgentConnectionWorker;
@@ -34,19 +35,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * InstrumentingAgent is executed before the rest of the instrumenting application execute.
+ * It fill a Map using the configuration details read from the configuration file.
+ * Map contains lists with instrumentation method details mapped against respective class names.
+ * Parallel to the creation of Map it will create a separate list including all
+ * the unique key names used in the configuration file.
+ * Eg: <parameterName key='key_1'></parameterName> insert '_key_1' as a list entry.
+ * Once, filtering is completed, start a seperate thread 'AgentConnectionWorker'
+ * to modify the current schema of the DAS table. Finally, add a transformer to start the
+ * instrumentation of class files.
+ */
 public class InstrumentingAgent {
+
     private static final Log log = LogFactory.getLog(InstrumentingAgent.class);
     private Map<String, List<InstrumentationClassData>> classMap = new HashMap<>();
 
     public static void premain(String agentArgs, Instrumentation instrumentation) {
         try {
             InstrumentingAgent agent = new InstrumentingAgent();
-            String[] agentArg = agentArgs.split(",");
-            InstrumentationDataHolder.getInstance().setConfigFilePathHolder(agentArg);
-            String filePath = InstrumentationDataHolder.getInstance().getConfigFilePathHolder();
-            if(InstrumentationDataHolder.getInstance().isCarbonProduct()){
-                filePath += File.separator+"repository"+File.separator+"conf"+File.separator+"javaagent"+File.separator;
-                System.out.println(filePath);
+            InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
+            agent.setConfigurationFilePath(agentArgs);
+            agent.setLoggingConfiguration();
+            String filePath = instDataHolder.getConfigFilePathHolder();
+            if (instDataHolder.isCarbonProduct()) {
+                filePath += File.separator + "repository" + File.separator + "conf" + File.separator + "javaagent"
+                        + File.separator;
             }
             filePath += "inst-agent-config.xml";
             File file = new File(filePath);
@@ -62,8 +76,9 @@ public class InstrumentingAgent {
                         agent.processClassData(agent, scenario, instClass);
                     }
                 }
-                InstrumentationDataHolder.getInstance().setAgentConnection(agentConnection);
-                InstrumentationDataHolder.getInstance().setClassMap(agent.classMap);
+                instDataHolder.setAgentConnection(agentConnection);
+                instDataHolder.setClassMap(agent.classMap);
+
                 AgentPublisherHolder.getInstance().addAgentConfiguration(agentConnection);
                 Thread connectionWorker = new Thread(new AgentConnectionWorker());
                 connectionWorker.start();
@@ -75,6 +90,11 @@ public class InstrumentingAgent {
         }
     }
 
+    private void setConfigurationFilePath(String agentArgs) {
+        String[] agentArg = agentArgs.split(",");
+        InstrumentationDataHolder.getInstance().setConfigFilePathHolder(agentArg);
+    }
+
     private void processClassData(InstrumentingAgent agent, Scenario scenario, InstrumentationClass instrumentationClass) {
         List<InstrumentationClassData> methodList = new ArrayList<>();
         methodList = fillMethodList(methodList, instrumentationClass, scenario.getScenarioName());
@@ -83,7 +103,7 @@ public class InstrumentingAgent {
                     scenario.getScenarioName());
         }
         agent.classMap.put(instrumentationClass.getClassName(), methodList);
-        //obtain required fields to update schema
+        // obtain required fields to update schema
         initializeArbitraryFieldList(instrumentationClass);
     }
 
@@ -157,5 +177,15 @@ public class InstrumentingAgent {
                 }
             }
         }
+    }
+
+    public void setLoggingConfiguration(){
+        InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
+        String log4jConfPath = instDataHolder.getConfigFilePathHolder();
+        if(instDataHolder.isCarbonProduct()){
+            log4jConfPath += File.separator+"repository"+ File.separator+"conf"+File.separator+"javaagent";
+        }
+        log4jConfPath += File.separator+"log4j.properties";
+        PropertyConfigurator.configure(log4jConfPath);
     }
 }

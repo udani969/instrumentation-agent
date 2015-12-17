@@ -30,8 +30,19 @@ import java.lang.instrument.IllegalClassFormatException;
 import java.security.ProtectionDomain;
 import java.util.List;
 
+/**
+ * InstrumentationClassTransformer handles the main instrumentation of classes loaded onto JVM.
+ * When a class is loaded it checks for a match in the Map created by the InstrumentingAgent.
+ * Bytecode of the selected class will be modified using Javassist.
+ * CtMethod object will be obtained by matching the method name and method signature.
+ * Each instrumenting method will be injected at three different locations to publish events
+ * to DAS server. A single event will contain correlationId, payload data and
+ * an arbitraryMap with required values.
+ */
 public class InstrumentationClassTransformer implements ClassFileTransformer {
+
     private static final Log log = LogFactory.getLog(InstrumentationClassTransformer.class);
+
     /**
      * Create a copy of currently processing class. Since javassist instrument methods with body,
      * for each Class iterate through all the methods defined to find respective methods.
@@ -53,6 +64,9 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
      */
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
             ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+        if(log.isDebugEnabled()){
+            log.debug("Loading class : "+className.replace('/','.'));
+        }
         ByteArrayInputStream currentClass = null;
         CtClass ctClass = null;
         byte[] transformedBytes = classfileBuffer;
@@ -73,34 +87,49 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
                         }
                     }
                 }
+                if(!transformed){
+                    CtClass extendedClass = ctClass.getSuperclass();
+                    if(extendedClass != null && instDataHolder.getClassMap().keySet().contains(extendedClass.getName())){
+                        instrumentClass(ctClass, extendedClass.getName());
+                        transformed = true;
+                    }
+                }
                 if (!transformed && instDataHolder.getClassMap().keySet().contains(ctClass.getName())) {
                     instrumentClass(ctClass, ctClass.getName());
                 }
             }
             transformedBytes = ctClass.toBytecode();
-        } catch (NotFoundException ignored) {
+        } catch (NotFoundException e) {
+            if(log.isDebugEnabled()){
+                log.debug("Unable to find "+ className.replace('/','.') + "for instrumentation : "+ e.getMessage());
+            }
         } catch (CannotCompileException | IOException e) {
-//            e.printStackTrace();
-            log.debug("Intrumentation of " + className.replace('/', '.') + "failed : " + e.getMessage());
+            e.printStackTrace();
+            if(log.isDebugEnabled()){
+                log.debug("Intrumentation of " + className.replace('/', '.') + "failed : " + e.getMessage());
+            }
         } finally {
             if (currentClass != null) {
                 try {
                     currentClass.close();
                 } catch (IOException e) {
-                    log.debug("Failed to close the connection : " + e.getMessage());
+                    if(log.isDebugEnabled()){
+                        log.debug("Failed to close the connection : " + e.getMessage());
+                    }
                 }
             }
             if(ctClass != null){
                 ctClass.detach();
-            }
-            if(transformedBytes != classfileBuffer){
-                log.debug("Instrumentation of "+ className.replace('/','.') + " completed..");
             }
         }
         return transformedBytes;
     }
 
     public void instrumentClass(CtClass ctClass, String name) throws NotFoundException, CannotCompileException {
+        if(log.isDebugEnabled()){
+            log.debug("Instrumenting " + ctClass.getName());
+        }
+        System.out.println("Instrumenting "+ctClass.getName());
         InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
         List<InstrumentationClassData> instMethods = instDataHolder.getClassMap().get(name);
         for (InstrumentationClassData instMethodData : instMethods) {
@@ -144,7 +173,6 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
 
     public void createInsertBefore(String payloadData, CtMethod method, InsertBefore beforeList)
             throws CannotCompileException {
-        System.out.println("Insert before of " + payloadData + "  " + method.getName());
         boolean addMap = false;
         StringBuilder beforeBuilder = new StringBuilder();
         method.addLocalVariable("instMethod_startTime", CtClass.longType);

@@ -25,7 +25,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * InstrumentationDataHolder holds set of data structures and
+ * configuration file paths required for the agent operations.
+ */
 public class InstrumentationDataHolder {
+
     private static InstrumentationDataHolder instance = null;
     private List<String> arbitraryFields = new ArrayList<>();
     private Map<String, List<InstrumentationClassData>> classMap = new HashMap<>();
