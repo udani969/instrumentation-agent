@@ -52,18 +52,13 @@ public class InstrumentingAgent {
     private Map<String, List<InstrumentationClassData>> classMap = new HashMap<>();
 
     public static void premain(String agentArgs, Instrumentation instrumentation) {
+        InstrumentingAgent agent = new InstrumentingAgent();
+        InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
+        agent.setConfigurationFilePath(agentArgs);
+        agent.setLoggingConfiguration();
+        log.debug("Starting Instrumentation javaagent");
         try {
-            InstrumentingAgent agent = new InstrumentingAgent();
-            InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
-            agent.setConfigurationFilePath(agentArgs);
-            agent.setLoggingConfiguration();
-            String filePath = instDataHolder.getConfigFilePathHolder();
-            if (instDataHolder.isCarbonProduct()) {
-                filePath += File.separator + "repository" + File.separator + "conf" + File.separator + "javaagent"
-                        + File.separator;
-            }
-            filePath += "inst-agent-config.xml";
-            File file = new File(filePath);
+            File file = new File(createAgentConfigFilepath(instDataHolder));
             JAXBContext jaxbContext = JAXBContext.newInstance(InstrumentationAgent.class);
             Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
             InstrumentationAgent instAgent = (InstrumentationAgent) jaxbUnmarshaller.unmarshal(file);
@@ -78,16 +73,29 @@ public class InstrumentingAgent {
                 }
                 instDataHolder.setAgentConnection(agentConnection);
                 instDataHolder.setClassMap(agent.classMap);
-
                 AgentPublisherHolder.getInstance().addAgentConfiguration(agentConnection);
                 Thread connectionWorker = new Thread(new AgentConnectionWorker());
                 connectionWorker.start();
+                if (log.isDebugEnabled()) {
+                    log.debug("Add transformer to instrumenting classes.");
+                }
                 instrumentation.addTransformer(new InstrumentationClassTransformer());
             }
         } catch (InstrumentationAgentException | JAXBException e) {
-            log.debug("InstrumentationAgent failed due to : " + e.getMessage());
-            e.printStackTrace();
+            if (log.isDebugEnabled()) {
+                log.debug("InstrumentationAgent failed due to : " + e.getMessage());
+            }
         }
+    }
+
+    private static String createAgentConfigFilepath(InstrumentationDataHolder instDataHolder) {
+        String filePath = instDataHolder.getConfigFilePathHolder();
+        if (instDataHolder.isCarbonProduct()) {
+            filePath += File.separator + "repository" + File.separator + "conf" + File.separator + "javaagent"
+                    + File.separator;
+        }
+        filePath += "inst-agent-config.xml";
+        return filePath;
     }
 
     private void setConfigurationFilePath(String agentArgs) {
@@ -179,13 +187,13 @@ public class InstrumentingAgent {
         }
     }
 
-    public void setLoggingConfiguration(){
+    public void setLoggingConfiguration() {
         InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
         String log4jConfPath = instDataHolder.getConfigFilePathHolder();
-        if(instDataHolder.isCarbonProduct()){
-            log4jConfPath += File.separator+"repository"+ File.separator+"conf"+File.separator+"javaagent";
+        if (instDataHolder.isCarbonProduct()) {
+            log4jConfPath += File.separator + "repository" + File.separator + "conf" + File.separator + "javaagent";
         }
-        log4jConfPath += File.separator+"log4j.properties";
+        log4jConfPath += File.separator + "log4j.properties";
         PropertyConfigurator.configure(log4jConfPath);
     }
 }

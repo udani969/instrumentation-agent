@@ -64,8 +64,8 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
      */
     public byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
             ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-        if(log.isDebugEnabled()){
-            log.debug("Loading class : "+className.replace('/','.'));
+        if (log.isDebugEnabled()) {
+            log.debug("Loading class : " + className.replace('/', '.'));
         }
         ByteArrayInputStream currentClass = null;
         CtClass ctClass = null;
@@ -87,9 +87,10 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
                         }
                     }
                 }
-                if(!transformed){
+                if (!transformed) {
                     CtClass extendedClass = ctClass.getSuperclass();
-                    if(extendedClass != null && instDataHolder.getClassMap().keySet().contains(extendedClass.getName())){
+                    if (extendedClass != null
+                            && instDataHolder.getClassMap().keySet().contains(extendedClass.getName())) {
                         instrumentClass(ctClass, extendedClass.getName());
                         transformed = true;
                     }
@@ -100,12 +101,11 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
             }
             transformedBytes = ctClass.toBytecode();
         } catch (NotFoundException e) {
-            if(log.isDebugEnabled()){
-                log.debug("Unable to find "+ className.replace('/','.') + "for instrumentation : "+ e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to find " + className.replace('/', '.') + "for instrumentation : " + e.getMessage());
             }
         } catch (CannotCompileException | IOException e) {
-            e.printStackTrace();
-            if(log.isDebugEnabled()){
+            if (log.isDebugEnabled()) {
                 log.debug("Intrumentation of " + className.replace('/', '.') + "failed : " + e.getMessage());
             }
         } finally {
@@ -113,12 +113,12 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
                 try {
                     currentClass.close();
                 } catch (IOException e) {
-                    if(log.isDebugEnabled()){
+                    if (log.isDebugEnabled()) {
                         log.debug("Failed to close the connection : " + e.getMessage());
                     }
                 }
             }
-            if(ctClass != null){
+            if (ctClass != null) {
                 ctClass.detach();
             }
         }
@@ -126,10 +126,9 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
     }
 
     public void instrumentClass(CtClass ctClass, String name) throws NotFoundException, CannotCompileException {
-        if(log.isDebugEnabled()){
+        if (log.isDebugEnabled()) {
             log.debug("Instrumenting " + ctClass.getName());
         }
-        System.out.println("Instrumenting "+ctClass.getName());
         InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
         List<InstrumentationClassData> instMethods = instDataHolder.getClassMap().get(name);
         for (InstrumentationClassData instMethodData : instMethods) {
@@ -183,7 +182,8 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
             createArbitraryMap(beforeList.getParameterNames(), beforeBuilder, "insertBeforeMap");
             addMap = true;
         }
-        beforeBuilder.append("org.wso2.das.javaagent.instrumentation.AgentPublisherHolder.getInstance().publishEvents(");
+        beforeBuilder
+                .append("org.wso2.das.javaagent.instrumentation.AgentPublisherHolder.getInstance().publishEvents(");
         beforeBuilder.append("System.currentTimeMillis(),");
         beforeBuilder.append("instMethod_correlationId,\"");
         beforeBuilder.append(payloadData);

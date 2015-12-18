@@ -58,7 +58,7 @@ public class AgentPublisherHolder {
     public void addAgentConfiguration(AgentConnection agentConnection) throws InstrumentationAgentException {
         locateConfigurationFiles();
         setupAgentPublisher(agentConnection, agentConnection.getStreamName(), agentConnection.getStreamVersion());
-        if(log.isDebugEnabled()){
+        if (log.isDebugEnabled()) {
             log.debug("Publisher created successfully");
         }
     }
