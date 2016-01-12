@@ -56,7 +56,9 @@ public class InstrumentingAgent {
         InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
         agent.setConfigurationFilePath(agentArgs);
         agent.setLoggingConfiguration();
-        log.debug("Starting Instrumentation javaagent");
+        if(log.isDebugEnabled()){
+            log.debug("Starting Instrumentation javaagent");
+        }
         try {
             File file = new File(createAgentConfigFilepath(instDataHolder));
             JAXBContext jaxbContext = JAXBContext.newInstance(InstrumentationAgent.class);

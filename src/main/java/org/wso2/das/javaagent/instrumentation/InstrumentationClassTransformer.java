@@ -77,6 +77,7 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
             currentClass = new ByteArrayInputStream(classfileBuffer);
             ctClass = classPool.makeClass(currentClass);
             if (!ctClass.isInterface()) {
+                // if the class given is an interface
                 CtClass[] interfaces = ctClass.getInterfaces();
                 if (interfaces.length != 0) {
                     for (CtClass baseClass : interfaces) {
@@ -87,14 +88,23 @@ public class InstrumentationClassTransformer implements ClassFileTransformer {
                         }
                     }
                 }
-                if (!transformed) {
-                    CtClass extendedClass = ctClass.getSuperclass();
-                    if (extendedClass != null
-                            && instDataHolder.getClassMap().keySet().contains(extendedClass.getName())) {
-                        instrumentClass(ctClass, extendedClass.getName());
-                        transformed = true;
+                // class provided is Superclass
+                try {
+                    if (!transformed) {
+                        CtClass extendedClass = ctClass.getSuperclass();
+                        if (extendedClass != null
+                                && instDataHolder.getClassMap().keySet().contains(extendedClass.getName())) {
+                            instrumentClass(ctClass, extendedClass.getName());
+                            transformed = true;
+                        }
+                    }
+                } catch (NotFoundException ignored) {
+                } catch (Exception e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Unable to instrument class due to : " + e.getMessage());
                     }
                 }
+                // Class provided is the exact class
                 if (!transformed && instDataHolder.getClassMap().keySet().contains(ctClass.getName())) {
                     instrumentClass(ctClass, ctClass.getName());
                 }

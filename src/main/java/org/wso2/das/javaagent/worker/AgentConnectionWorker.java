@@ -19,6 +19,8 @@
 package org.wso2.das.javaagent.worker;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -40,6 +42,7 @@ import java.util.Set;
 
 public class AgentConnectionWorker implements Runnable {
     private Set<String> currentSchemaFieldsSet = new HashSet<>();
+    private static final Log log = LogFactory.getLog(AgentConnectionWorker.class);
 
     public void run() {
         InstrumentationDataHolder instDataHolder = InstrumentationDataHolder.getInstance();
@@ -48,18 +51,17 @@ public class AgentConnectionWorker implements Runnable {
         if (!instDataHolder.getArbitraryFields().isEmpty()) {
             try {
                 Thread.sleep(5000);
-                // updateCurrentSchema(agentConnection, generateConnectionURL(agentConnection),
-                // agentConnection.getUsername(), agentConnection.getPassword(),
-                // instDataHolder.getArbitraryFields());
                 updateCurrentSchema(instDataHolder);
             } catch (InstrumentationAgentException | InterruptedException e) {
-                e.getMessage();
+                if (log.isDebugEnabled()) {
+                    log.debug("AgentConnectionWorker : " + e.getMessage());
+                }
             }
         }
     }
 
     /**
-     * @return Fields of current schema as a set
+     * @return Fields of current schema as a set.
      */
     public Set<String> getCurrentSchemaFieldsSet() {
         return currentSchemaFieldsSet;
@@ -98,31 +100,6 @@ public class AgentConnectionWorker implements Runnable {
      * available fields. For each field read from the configuration file, check against the
      * current filtered fields set. Add only the new fields to the schema. Finally return the
      * modified schema using REST API.
-     * 
-     * @param connectionUrl url to connect to server
-     * @param username username of the server
-     * @param password password of the server
-     * @param arbitraryFields List of fields read from the configuration file,
-     *            which need to be inserted in schema
-     * @throws IOException
-     * @throws ParseException
-     */
-    // public void updateCurrentSchema(AgentConnection agentConnection, String connectionUrl, String username, String
-    // password, List<String> arbitraryFields)
-    // throws InstrumentationAgentException {
-    // String currentSchema = getCurrentSchema(agentConnection, connectionUrl, username, password);
-    // filterCurrentSchemaFields(currentSchema);
-    // String modifiedSchema = addArbitraryFieldsToSchema(currentSchema, arbitraryFields);
-    // if (!modifiedSchema.equals(currentSchema)) {
-    // setModifiedSchema(connectionUrl, username, password, modifiedSchema);
-    // }
-    // }
-
-    /**
-     * Obtain the current schema of the given table. Filter the column names of currently
-     * available fields. For each field read from the configuration file, check against the
-     * current filtered fields set. Add only the new fields to the schema. Finally return the
-     * modified schema using REST API.
      *
      * @param instDataHolder Static instance of AgentPublisherHolder class.
      * @throws InstrumentationAgentException
@@ -130,11 +107,10 @@ public class AgentConnectionWorker implements Runnable {
     public void updateCurrentSchema(InstrumentationDataHolder instDataHolder) throws InstrumentationAgentException {
         AgentConnection agentConnection = instDataHolder.getAgentConnection();
         String connectionUrl = generateConnectionURL(agentConnection);
-        String currentSchema = getCurrentSchema(agentConnection, connectionUrl,
-                agentConnection.getUsername(), agentConnection.getPassword());
+        String currentSchema = getCurrentSchema(agentConnection, connectionUrl, agentConnection.getUsername(),
+                agentConnection.getPassword());
         filterCurrentSchemaFields(currentSchema);
-        String modifiedSchema = addArbitraryFieldsToSchema(currentSchema,
-                instDataHolder.getArbitraryFields());
+        String modifiedSchema = addArbitraryFieldsToSchema(currentSchema, instDataHolder.getArbitraryFields());
         if (!modifiedSchema.equals(currentSchema)) {
             setModifiedSchema(agentConnection, connectionUrl, agentConnection.getUsername(),
                     agentConnection.getPassword(), modifiedSchema);
@@ -179,20 +155,21 @@ public class AgentConnectionWorker implements Runnable {
                     inputStreamReader.close();
                     conn.disconnect();
                 } catch (IOException e) {
+                    throw new InstrumentationAgentException(
+                            "Connection exception occurred while trying to modify table schema : " + e.getMessage());
                 }
             }
         }
     }
 
     /**
-     * Modify current schema by adding relevant definition of new fields
+     * Modify current schema by adding relevant definition of new fields.
      * 
      * @param currentSchema currentSchema
      * @param arbitraryFields list of all fields read from configuration file
      * @return modified schema to update on server
      */
-    public String addArbitraryFieldsToSchema(String currentSchema,
-            List<String> arbitraryFields) {
+    public String addArbitraryFieldsToSchema(String currentSchema, List<String> arbitraryFields) {
         for (String arbitraryField : arbitraryFields) {
             if (!getCurrentSchemaFieldsSet().contains(arbitraryField)) {
                 int insertionPoint = currentSchema.indexOf("},\"primaryKeys\":[", 0);
@@ -214,7 +191,7 @@ public class AgentConnectionWorker implements Runnable {
     }
 
     /**
-     * Update the current schema of the persisted table using REST API of DAS
+     * Update the current schema of the persisted table using REST API of DAS.
      * 
      * @param connectionUrl https request to sent to the REST API
      * @param username Username of the server
@@ -250,14 +227,13 @@ public class AgentConnectionWorker implements Runnable {
     }
 
     /**
-     * Obtain the current schema and obtain the key set of schema using JSON parser
+     * Obtain the current schema and obtain the key set of schema using JSON parser.
      * 
-     * @param currentSchema currentSchema of the table
-     * @throws ParseException
+     * @param currentSchema current schema of the persisted table
+     * @throws InstrumentationAgentException
      */
     @SuppressWarnings("unchecked")
-    public void filterCurrentSchemaFields(String currentSchema)
-            throws InstrumentationAgentException {
+    public void filterCurrentSchemaFields(String currentSchema) throws InstrumentationAgentException {
         try {
             JSONParser parser = new JSONParser();
             JSONObject json = (JSONObject) parser.parse(currentSchema);
